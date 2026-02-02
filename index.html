@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Yes / No Animation</title>
+    <style>
+      :root {
+        --bg: #0f1724;
+        --card: #0b1220;
+        --accent: #7c3aed;
+        --yes: #10b981;
+        --no: #ef4444;
+        color-scheme: dark;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+      }
+      body {
+        background: linear-gradient(
+          180deg,
+          #071029 0%,
+          #081428 50%,
+          #071427 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .stage {
+        width: 920px;
+        max-width: 96%;
+        height: 520px;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.02),
+          rgba(0, 0, 0, 0.15)
+        );
+        border-radius: 20px;
+        box-shadow:
+          0 10px 30px rgba(2, 6, 23, 0.6),
+          inset 0 1px 0 rgba(255, 255, 255, 0.02);
+        position: relative;
+        overflow: hidden;
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      h1 {
+        color: #e6eef8;
+        margin: 0 0 18px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      p.lead {
+        color: #9fb3d6;
+        margin: 0 0 28px;
+      }
+      .controls {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn {
+        position: relative;
+        padding: 14px 28px;
+        border-radius: 12px;
+        border: 0;
+        color: white;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 6px 18px rgba(2, 6, 23, 0.6);
+        transform: translateZ(0);
+        transition:
+          transform 0.18s ease,
+          box-shadow 0.18s ease;
+      }
+      .btn:active {
+        transform: translateY(2px);
+      }
+      .btn--yes {
+        background: linear-gradient(180deg, var(--yes), #059669);
+        box-shadow:
+          0 8px 30px rgba(16, 185, 129, 0.12),
+          0 2px 0 rgba(0, 0, 0, 0.25);
+      }
+      .btn--no {
+        background: linear-gradient(180deg, var(--no), #dc2626);
+        box-shadow:
+          0 8px 30px rgba(239, 68, 68, 0.12),
+          0 2px 0 rgba(0, 0, 0, 0.25);
+      }
+
+      /* boy element */
+      .boy {
+        position: absolute;
+        left: -150px;
+        bottom: 16px;
+        width: 140px;
+        height: 200px;
+        transform-origin: center bottom;
+        pointer-events: none;
+        opacity: 0;
+      }
+      .boy svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      /* make the left arm pivot around a natural shoulder point (SVG-friendly) */
+      #leftArm { transform-box: fill-box; transform-origin: 20% 10%; }
+
+      /* keyframes for boy entrance and punch */
+      @keyframes boyEnter {
+        0% {
+          transform: translateX(-220px) scale(0.9) rotate(-6deg);
+          opacity: 0;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateX(0) scale(1) rotate(0);
+          opacity: 1;
+        }
+      }
+      @keyframes boyPunch {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+
+      /* balloons container now spans the stage so many hearts can float around */
+      #balloons {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .heart {
+        position: absolute;
+        transform: rotate(-45deg);
+        box-shadow: 0 8px 22px rgba(2, 6, 23, 0.35);
+        will-change: transform, opacity;
+      }
+      .heart::before,
+      .heart::after {
+        content: "";
+        position: absolute;
+        background: inherit;
+        border-radius: 50%;
+        width: 100%;
+        height: 100%;
+      }
+      .heart::before {
+        top: -50%;
+        left: 0;
+      }
+      .heart::after {
+        top: 0;
+        left: 50%;
+      }
+
+      @keyframes floatHeart {
+        0% {
+          transform: translateY(0) rotate(-45deg) scale(0.95);
+          opacity: 1;
+        }
+        70% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-640px) rotate(-35deg) scale(1.05);
+          opacity: 0;
+        }
+      }
+      @keyframes sway {
+        0% {
+          transform: translateX(-8px);
+        }
+        50% {
+          transform: translateX(8px);
+        }
+        100% {
+          transform: translateX(-8px);
+        }
+      }
+
+      /* centered message inside heart cloud */
+      .message {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: 800;
+        padding: 20px 32px;
+        border-radius: 24px;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.04),
+          rgba(255, 255, 255, 0.02)
+        );
+        letter-spacing: 0.04em;
+        z-index: 140;
+        backdrop-filter: blur(6px);
+        pointer-events: auto;
+      }
+      .show {
+        animation: popIn 700ms cubic-bezier(0.2, 0.9, 0.25, 1) forwards;
+      }
+      @keyframes popIn {
+        0% {
+          transform: translate(-50%, -50%) scale(0.86);
+          opacity: 0;
+        }
+        60% {
+          transform: translate(-50%, -50%) scale(1.06);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* nice micro-interactions */
+      .btn--no:hover {
+        transform: translateY(-4px) scale(1.02);
+      }
+      .btn--yes:hover {
+        transform: translateY(-4px) scale(1.02);
+      }
+
+      /* small responsive tweaks */
+      @media (max-width: 520px) {
+        .stage {
+          padding: 20px;
+          height: 70vh;
+        }
+        .boy {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div
+        id="stage-content"
+        style="text-align: center; max-width: 640px; margin: 0 auto"
+      >
+        <h1>Will you be my Valentine?</h1>
+        <p class="lead">
+          Choose honestly — but be careful where the answer goes.
+        </p>
+        <div class="controls">
+          <button id="yesBtn" class="btn btn--yes">Yes</button>
+          <button id="noBtn" class="btn btn--no">No</button>
+        </div>
+      </div>
+
+      <!-- boy illustration (inline SVG) -->
+      <div id="boy" class="boy" aria-hidden="true">
+        <svg viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">
+          <g transform="translate(0,6)">
+            <!-- soft shadow -->
+            <ellipse cx="100" cy="288" rx="36" ry="8" fill="rgba(0,0,0,0.06)" />
+
+            <!-- legs -->
+            <rect x="78" y="210" width="16" height="44" rx="6" fill="#0f1724" opacity="0.9" />
+            <rect x="106" y="210" width="16" height="44" rx="6" fill="#0f1724" opacity="0.9" />
+
+            <!-- body / shirt -->
+            <rect x="64" y="138" width="72" height="76" rx="12" fill="#3b82f6" />
+
+            <!-- left arm: outer group keeps translate; inner #leftArm rotates only -->
+            <g id="leftArmWrap" transform="translate(56,154)">
+              <g id="leftArm">
+                <rect x="-6" y="28" width="16" height="12" rx="6" fill="#f4c08a" />
+                <rect x="-28" y="12" width="40" height="18" rx="8" fill="#3b82f6" transform="rotate(-18)" />
+              </g>
+            </g>
+
+            <!-- right arm -->
+            <g transform="translate(144,154)">
+              <rect x="-34" y="12" width="40" height="18" rx="8" fill="#3b82f6" transform="rotate(18)" />
+            </g>
+
+            <!-- head -->
+            <g>
+              <circle cx="100" cy="86" r="34" fill="#fce6c8" />
+              <path d="M74 74c6-16 44-20 56-8 0 0-2-6-8-8-10-6-46-6-48 6z" fill="#111827" opacity="0.9" />
+              <circle cx="88" cy="86" r="4" fill="#111827" />
+              <circle cx="112" cy="86" r="4" fill="#111827" />
+              <path d="M86 98c6 5 18 5 24 0" stroke="#111827" stroke-width="2" fill="none" stroke-linecap="round"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <!-- balloons and message holder -->
+      <div id="balloons" aria-hidden="true" hidden></div>
+      <div id="message" class="message" aria-hidden="true" hidden>I LOVE YOU MY VALENTINE</div>
+    </div>
+
+    <script>
+      // Grab elements
+      const yesBtn = document.getElementById("yesBtn");
+      const noBtn = document.getElementById("noBtn");
+      const boy = document.getElementById("boy");
+      const balloons = document.getElementById("balloons");
+      const message = document.getElementById("message");
+
+      // ensure hidden initially
+      balloons.hidden = true;
+      message.hidden = true;
+
+      // Utility: get center coordinates of an element relative to stage
+      function centerOf(el) {
+        const rect = el.getBoundingClientRect();
+        const stageRect = document
+          .querySelector(".stage")
+          .getBoundingClientRect();
+        return {
+          x: rect.left + rect.width - stageRect.left,
+          y: rect.top + rect.height / 2 - stageRect.top,
+        };
+      }
+
+      // Animate boy moving toward an (x,y) within stage
+      function animateBoyTo(targetX, callback) {
+        boy.style.opacity = "1";
+        // smooth horizontal + vertical movement
+        boy.style.transition = "transform 700ms cubic-bezier(.22,.9,.32,1), bottom 700ms cubic-bezier(.22,.9,.32,1)";
+        const boyRect = boy.getBoundingClientRect();
+        const stageRect = document.querySelector(".stage").getBoundingClientRect();
+
+        const startX = -150;
+        const targetLeft = targetX - boyRect.width / 2;
+        const dx = targetLeft - startX;
+
+        // compute vertical bottom so boy stands roughly level with button
+        const targetY = centerOf(yesBtn).y; // y relative to stage
+        const desiredBottom = Math.max(8, Math.round(stageRect.height - targetY - boyRect.height * 0.5));
+
+        boy.style.left = startX + "px";
+        boy.style.bottom = desiredBottom + "px";
+        boy.style.transform = `translateX(${dx}px)`;
+
+        // small arm wag then callback
+        setTimeout(() => {
+          const arm = document.getElementById("leftArm");
+              if (arm) {
+                // subtle rotation only, avoid translations so arm stays attached to body
+                arm.animate([
+                  { transform: "rotate(-4deg)" },
+                  { transform: "rotate(6deg)" },
+                  { transform: "rotate(-2deg)" }
+                ], { duration: 520, easing: "ease-out" });
+              }
+          setTimeout(() => { if (typeof callback === "function") callback(); }, 300);
+        }, 760);
+      }
+
+      // Continuous spawning system: start spawning on Yes (or simulated Yes), keep spawning until user clicks anywhere (except the buttons)
+      let spawning = false;
+      let spawnTimer = null;
+
+      function spawnHeartOnce(stageRect) {
+        const colors = [
+          "#FF0000",
+          "#DC143C",
+          "#800000",
+          "#880808",
+          "#EE4B2B",
+          "#FF6961",
+          "#FF2400",
+          "#AA4A44",
+          "#B22222",
+          "#FF4500",
+          "#8B0000",
+        ];
+        const wrap = document.createElement("div");
+        wrap.className = "heart-wrap";
+        wrap.style.position = "absolute";
+        const size = 18 + Math.random() * 56;
+        const left = Math.random() * (stageRect.width - size);
+        const top = stageRect.height + (10 + Math.random() * 120);
+        wrap.style.left = left + "px";
+        wrap.style.top = top + "px";
+        wrap.style.width = size + "px";
+        wrap.style.height = size + "px";
+
+        const h = document.createElement("div");
+        h.className = "heart";
+        h.style.width = size + "px";
+        h.style.height = size + "px";
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        h.style.background = `linear-gradient(180deg, ${color}, ${shade(color, -18)})`;
+        h.style.left = "0px";
+        h.style.top = "0px";
+
+        wrap.appendChild(h);
+        balloons.appendChild(wrap);
+
+        // much slower rise than before
+        const dur = 9000 + Math.random() * 8000; // 9s - 17s
+        const startDelay = Math.random() * 900;
+        const rise = stageRect.height + 320 + Math.random() * 220;
+        const vAnim = wrap.animate(
+          [
+            { transform: "translateY(0px)", opacity: 1 },
+            { transform: `translateY(-${rise}px)`, opacity: 0.02 },
+          ],
+          {
+            duration: dur,
+            easing: "cubic-bezier(.18,.9,.25,1)",
+            fill: "forwards",
+            delay: startDelay,
+          },
+        );
+
+        // horizontal sway on inner heart
+        const swayAmt = 6 + Math.random() * 18;
+        h.animate(
+          [
+            { transform: `rotate(-45deg) translateX(-${swayAmt}px)` },
+            { transform: `rotate(-45deg) translateX(${swayAmt}px)` },
+            { transform: `rotate(-45deg) translateX(-${swayAmt}px)` },
+          ],
+          {
+            duration: 2200 + Math.random() * 2600,
+            iterations: Infinity,
+            easing: "ease-in-out",
+            delay: startDelay,
+          },
+        );
+
+        // cleanup element after its animation finishes
+        setTimeout(
+          () => {
+            if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+          },
+          dur + startDelay + 800,
+        );
+      }
+
+      function startSpawning() {
+        if (spawning) return;
+        // remove/hide buttons behind the scene with a small fade
+        const controls = document.querySelector("#stage-content");
+        if (controls) {
+          // mark that spawning intentionally hid these controls so we can restore later
+          controls.dataset.hiddenBySpawning = "true";
+          controls.style.transition =
+            "opacity 500ms ease, transform 500ms ease";
+          controls.style.opacity = "0";
+          controls.style.transform = "translateY(-8px)";
+          setTimeout(() => {
+            // remove from layout so they don't catch clicks or remain visible
+            controls.style.display = "none";
+          }, 520);
+        }
+        spawning = true;
+        balloons.hidden = false;
+        message.hidden = false;
+        message.classList.remove("show");
+        requestAnimationFrame(() => message.classList.add("show"));
+        const stage = document.querySelector(".stage");
+        const rect = stage.getBoundingClientRect();
+        // spawn a random number of hearts immediately (1..55)
+        function scheduleBalloons(count) {
+            const initialCount = Math.floor(Math.random() * count) + 1;
+            for (let i = 0; i < initialCount; i++) spawnHeartOnce(rect);
+        }
+
+        scheduleBalloons(25)
+
+        // schedule subsequent spawns with randomized interval (400ms - 1000ms)
+        function scheduleNext(){
+          if(!spawning) return;
+          const delay = 40 // 40..1000
+          spawnTimer = setTimeout(()=>{
+            scheduleBalloons(15);
+            scheduleNext();
+          }, delay);
+        }
+        scheduleNext();
+      }
+
+      function stopSpawning() {
+        if (!spawning) return;
+        spawning = false;
+        if (spawnTimer) {
+          clearTimeout(spawnTimer);
+          spawnTimer = null;
+        }
+        // fade message then hide it
+        message.style.transition = "opacity 600ms ease, transform 600ms ease";
+        message.style.opacity = "0";
+        message.style.transform = "translate(-50%,-50%) scale(.98)";
+        setTimeout(() => {
+          message.hidden = true;
+          message.style.opacity = "1";
+          message.style.transform = "translate(-50%,-50%)";
+        }, 700);
+
+        setTimeout(() => {
+            // restore the selected section (controls) if it was hidden by spawning
+            const controls = document.querySelector("#stage-content");
+            if (controls && controls.dataset.hiddenBySpawning === "true") {
+              // bring back into layout then fade in
+              controls.style.display = "";
+              // set starting styles for transition
+              controls.style.transition = "opacity 500ms ease, transform 500ms ease";
+              controls.style.opacity = "0";
+              controls.style.transform = "translateY(-8px)";
+              // force a reflow then animate to visible
+              requestAnimationFrame(() => {
+                controls.style.opacity = "1";
+                controls.style.transform = "translateY(0)";
+                // remove marker
+                delete controls.dataset.hiddenBySpawning;
+              });
+            }
+        }, 2000)
+      }
+
+      // tiny color shade helper
+      function shade(hex, percent) {
+        const c = hex.replace("#", "");
+        const num = parseInt(c, 16);
+        let r = (num >> 16) + percent;
+        let g = ((num >> 8) & 0x00ff) + percent;
+        let b = (num & 0x0000ff) + percent;
+        r = Math.max(Math.min(255, r), 0);
+        g = Math.max(Math.min(255, g), 0);
+        b = Math.max(Math.min(255, b), 0);
+        return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
+      }
+
+      // NO button click: shows boy who presses YES (simulate user clicking yes)
+      noBtn.addEventListener("click", () => {
+        const center = centerOf(yesBtn);
+        animateBoyTo(center.x, () => {
+          setTimeout(() => {
+            yesBtn.classList.add("clicked-by-boy");
+            yesBtn.animate(
+              [
+                { transform: "scale(1)" },
+                { transform: "scale(0.98)" },
+                { transform: "scale(1)" },
+              ],
+              { duration: 260 },
+            );
+            // ensure the simulated click doesn't immediately trigger stop handler
+            ignoreDocClick = true;
+            yesBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+            setTimeout(() => {
+              ignoreDocClick = false;
+            }, 300);
+            setTimeout(() => {
+              boy.style.opacity = "0";
+              boy.style.transform = "";
+            }, 900);
+          }, 140);
+        });
+      });
+
+      // YES click: start continuous balloons and show message
+      yesBtn.addEventListener("click", () => {
+        startSpawning();
+      });
+
+      // global click stops spawning (ignore clicks on the controls themselves)
+      let ignoreDocClick = false;
+      document.addEventListener("click", (e) => {
+        if (!spawning) return;
+        if (ignoreDocClick) return;
+        if (
+          e.target === yesBtn ||
+          e.target === noBtn ||
+          yesBtn.contains(e.target) ||
+          noBtn.contains(e.target)
+        )
+          return;
+        stopSpawning();
+      });
+
+      // Accessibility: keyboard triggers
+      noBtn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") noBtn.click();
+      });
+      yesBtn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") yesBtn.click();
+      });
+    </script>
+  </body>
+</html>
